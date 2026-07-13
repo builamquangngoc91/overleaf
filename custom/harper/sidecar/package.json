@@ -1,0 +1,11 @@
+{
+  "name": "harper-sidecar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tiny HTTP wrapper around harper.js for grammar-checking LaTeX from Overleaf",
+  "main": "server.mjs",
+  "dependencies": {
+    "harper.js": "2.4.0"
+  }
+}

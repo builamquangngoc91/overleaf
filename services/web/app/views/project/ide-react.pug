@@ -32,6 +32,13 @@ block prepend foot-scripts
 		src=(wsUrl || '/socket.io') + '/socket.io.js'
 		defer=deferScripts
 	)
+	//- Harper grammar checker panel
+	script(
+		type='text/javascript'
+		nonce=scriptNonce
+		src='/harper/grammar-panel.js?v=4'
+		defer=deferScripts
+	)
 
 block append head-scripts
 	include ./_mixpanel_autocapture.pug

@@ -35,6 +35,8 @@ import ExportsController from './Features/Exports/ExportsController.mjs'
 import PasswordResetRouter from './Features/PasswordReset/PasswordResetRouter.mjs'
 import StaticPagesRouter from './Features/StaticPages/StaticPagesRouter.mjs'
 import ChatController from './Features/Chat/ChatController.mjs'
+import ThreadsController from './Features/Chat/ThreadsController.mjs'
+import GrammarController from './Features/Grammar/GrammarController.mjs'
 import Modules from './infrastructure/Modules.mjs'
 import {
   RateLimiter,
@@ -1047,6 +1049,57 @@ async function initialize(webRouter, privateApiRouter, publicApiRouter) {
       ChatController.editMessage
     )
   }
+
+  // Comment threads for the review panel (comments + track changes).
+  // Note: read-only collaborators are still allowed to add comments.
+  webRouter.get(
+    '/project/:project_id/threads',
+    AuthorizationMiddleware.ensureUserCanReadProject,
+    ThreadsController.getThreads
+  )
+  webRouter.post(
+    '/project/:project_id/thread/:thread_id/messages',
+    AuthorizationMiddleware.ensureUserCanReadProject,
+    RateLimiterMiddleware.rateLimit(rateLimiters.sendChatMessage),
+    ThreadsController.sendComment
+  )
+  webRouter.post(
+    '/project/:project_id/doc/:doc_id/thread/:thread_id/resolve',
+    AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+    ThreadsController.resolveThread
+  )
+  webRouter.post(
+    '/project/:project_id/doc/:doc_id/thread/:thread_id/reopen',
+    AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+    ThreadsController.reopenThread
+  )
+  webRouter.delete(
+    '/project/:project_id/doc/:doc_id/thread/:thread_id',
+    AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+    ThreadsController.deleteThread
+  )
+  webRouter.post(
+    '/project/:project_id/thread/:thread_id/messages/:message_id/edit',
+    AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+    ThreadsController.editMessage
+  )
+  webRouter.delete(
+    '/project/:project_id/thread/:thread_id/messages/:message_id',
+    AuthorizationMiddleware.ensureUserCanWriteProjectContent,
+    ThreadsController.deleteMessage
+  )
+  webRouter.delete(
+    '/project/:project_id/thread/:thread_id/own-messages/:message_id',
+    AuthorizationMiddleware.ensureUserCanReadProject,
+    ThreadsController.deleteOwnMessage
+  )
+
+  // Grammar checking (Harper) — proxied to the harper sidecar service.
+  webRouter.post(
+    '/project/:project_id/grammar/check',
+    AuthorizationMiddleware.ensureUserCanReadProject,
+    GrammarController.check
+  )
 
   webRouter.post(
     '/project/:Project_id/references/indexAll',

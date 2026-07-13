@@ -3,7 +3,10 @@ import Path from 'node:path'
 let ProjectEditorHandler
 
 export default ProjectEditorHandler = {
-  trackChangesAvailable: false,
+  // Enabled in this Community Edition build to surface the review panel
+  // (comments + track changes). On overleaf.com this is flipped by a
+  // premium module; here we make it available to everyone.
+  trackChangesAvailable: true,
 
   buildProjectModelView(
     project,

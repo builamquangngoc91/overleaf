@@ -1,4 +1,11 @@
 services:
+  harper:
+    build: ./custom/harper/sidecar
+    container_name: harper
+    restart: always
+    expose:
+      - "3000"
+
   sharelatex:
     restart: always
     # Server Pro users:
@@ -10,11 +17,22 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      harper:
+        condition: service_started
     ports:
       - 80:80
     stop_grace_period: 60s
     volumes:
       - ~/sharelatex_data:/var/lib/overleaf
+      # --- Comments / Review panel feature patch (persistent) ---
+      # Enables the review panel + comment-thread REST routes in Community Edition.
+      - /home/palas/Desktop/overleaf/services/web/app/src/Features/Project/ProjectEditorHandler.mjs:/overleaf/services/web/app/src/Features/Project/ProjectEditorHandler.mjs
+      - /home/palas/Desktop/overleaf/services/web/app/src/Features/Chat/ThreadsController.mjs:/overleaf/services/web/app/src/Features/Chat/ThreadsController.mjs
+      - /home/palas/Desktop/overleaf/services/web/app/src/router.mjs:/overleaf/services/web/app/src/router.mjs
+      # --- Harper grammar checker patch ---
+      - /home/palas/Desktop/overleaf/services/web/app/src/Features/Grammar/GrammarController.mjs:/overleaf/services/web/app/src/Features/Grammar/GrammarController.mjs
+      - /home/palas/Desktop/overleaf/services/web/app/views/project/ide-react.pug:/overleaf/services/web/app/views/project/ide-react.pug
+      - /home/palas/Desktop/overleaf/custom/harper/web:/overleaf/services/web/public/harper
       ########################################################################
       ####  Server Pro: Uncomment the following line to mount the docker  ####
       ####             socket, required for Sibling Containers to work    ####
@@ -22,6 +40,7 @@ services:
       # - /var/run/docker.sock:/var/run/docker.sock
     environment:
       OVERLEAF_APP_NAME: Overleaf Community Edition
+      HARPER_URL: http://harper:3000
 
       OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex
 
@@ -30,8 +49,10 @@ services:
       OVERLEAF_REDIS_HOST: redis
       REDIS_HOST: redis
 
+      LOG_LEVEL: debug
+
       # IMPORTANT: Required for invite token generation
-      # OVERLEAF_INVITE_TOKEN_SECRET: generate with `openssl rand -base64 32`
+      OVERLEAF_INVITE_TOKEN_SECRET: Msdl2020!@@ 
 
       ENABLED_LINKED_FILE_TYPES: "project_file,project_output_file"
 
@@ -42,12 +63,13 @@ services:
       EMAIL_CONFIRMATION_DISABLED: "true"
 
       ## Set for SSL via nginx-proxy
-      #VIRTUAL_HOST: 103.112.212.22
+      VIRTUAL_HOST: palas.jbnu.ac.kr
+      VIRTUAL_PORT: 80
 
       # OVERLEAF_SITE_URL: http://overleaf.example.com
-      # OVERLEAF_NAV_TITLE: Overleaf Community Edition
-      # OVERLEAF_HEADER_IMAGE_URL: http://example.com/mylogo.png
-      # OVERLEAF_ADMIN_EMAIL: support@it.com
+      OVERLEAF_NAV_TITLE: MSDL Overleaf
+      OVERLEAF_HEADER_IMAGE_URL: https://msdl.jbnu.ac.kr/images/logo-w.png
+      OVERLEAF_ADMIN_EMAIL: msdl@jbnu.ac.kr
 
       # OVERLEAF_LEFT_FOOTER: '[{"text": "Another page I want to link to can be found <a href=\"here\">here</a>"} ]'
       # OVERLEAF_RIGHT_FOOTER: '[{"text": "Hello I am on the Right"} ]'
@@ -79,14 +101,14 @@ services:
       ## so the following environment variables must be commented out to avoid compile issues.
       ##
       ## Sandboxed Compiles: https://docs.overleaf.com/on-premises/configuration/overleaf-toolkit/server-pro-only-configuration/sandboxed-compiles
-      SANDBOXED_COMPILES: "true"
+      # SANDBOXED_COMPILES: "false"
       ### Bind-mount source for /var/lib/overleaf/data/compiles inside the container.
-      SANDBOXED_COMPILES_HOST_DIR_COMPILES: "/home/user/sharelatex_data/data/compiles"
+      # SANDBOXED_COMPILES_HOST_DIR_COMPILES: "/home/user/sharelatex_data/data/compiles"
       ### Bind-mount source for /var/lib/overleaf/data/output inside the container.
-      SANDBOXED_COMPILES_HOST_DIR_OUTPUT: "/home/user/sharelatex_data/data/output"
+      # SANDBOXED_COMPILES_HOST_DIR_OUTPUT: "/home/user/sharelatex_data/data/output"
       ### Backwards compatibility (before Server Pro 5.5)
-      DOCKER_RUNNER: "true"
-      SANDBOXED_COMPILES_SIBLING_CONTAINERS: "true"
+      # DOCKER_RUNNER: "true"
+      # SANDBOXED_COMPILES_SIBLING_CONTAINERS: "true"
 
       ## Works with test LDAP server shown at bottom of docker compose
       # OVERLEAF_LDAP_URL: 'ldap://ldap:389'
@@ -141,12 +163,12 @@ services:
   # settings. We recommend using a properly managed nginx instance outside of the Overleaf Server Pro setup,
   # but the example here can be used if you'd prefer to run everything with docker-compose
 
-  # nginx-proxy:
-  #     image: jwilder/nginx-proxy
-  #     container_name: nginx-proxy
-  #     ports:
-  #       - "80:80"
-  #       - "443:443"
-  #     volumes:
-  #       - /var/run/docker.sock:/tmp/docker.sock:ro
-  #       - /home/overleaf/tmp:/etc/nginx/certs
+  nginx-proxy:
+      image: jwilder/nginx-proxy
+      container_name: nginx-proxy
+      ports:
+        - "8080:80"
+        - "443:443"
+      volumes:
+        - /var/run/docker.sock:/tmp/docker.sock:ro
+        - /home/overleaf/tmp:/etc/nginx/certs
